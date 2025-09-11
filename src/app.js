@@ -21,4 +21,14 @@ app.use(
 app.use(express.static("public"));
 app.use(cookieParser());
 
+//----------- Routes imports -------------------
+import userRoutes from "./routes/user.routes.js";
+import productRoutes from "./routes/products.routes.js";
+
+app.use("/api/v1/users", userRoutes);
+// http://localhost:8000/api/v1/users/register
+
+app.use("/api/v1/category", productRoutes);
+// http://localhost:8000/api/v1/category/products
+
 export default app;

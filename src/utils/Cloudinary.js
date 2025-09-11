@@ -40,7 +40,7 @@ const uploadOnCloudinary = async (localFilePath) => {
     });
 
     // ✅ If upload is successful, log and return details
-    if (result) console.log("File Uploaded Successfully", result);
+    if (result) console.log("File Uploaded on cloudinary: ", result.url);
     return result;
   } catch (error) {
     // ❌ If upload fails, delete local file (cleanup)
@@ -56,3 +56,4 @@ export { uploadOnCloudinary };
 // 1. you can set the resource_type to "image", "video", or "raw" if you know the type
 // 2. you can delete files from Cloudinary using cloudinary.uploader.destroy()
 // 3. cloudinary lets you transform images/videos during upload (resize, crop, etc.)
+// 4. Learn about advanced file upload options in Cloudinary docs

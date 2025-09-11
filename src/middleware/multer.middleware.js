@@ -12,18 +12,18 @@ import multer from "multer";
 //   2. filename    → how the uploaded file will be named
 const storage = multer.diskStorage({
   // 🔹 destination: folder path where file will be saved
-  destination: function (req, file, cb) {
-    cb(null, "/Public/temp");
-  },
   // "cb" means callback. First parameter is error (null if no error),
   // second parameter is the folder path.
   // ⚠️ Note: Make sure this folder exists in your project
+  destination: function (req, file, cb) {
+    cb(null, "/Public/temp");
+  },
 
   // 🔹 filename: how the file will be named on the server
+  // file.originalname = the actual file name from user’s computer
   filename: function (req, file, cb) {
     cb(null, file.originalname);
   },
-  // file.originalname = the actual file name from user’s computer
 });
 
 // Create and export Upload Middleware
