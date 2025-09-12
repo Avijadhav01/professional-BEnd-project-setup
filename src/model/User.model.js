@@ -12,6 +12,12 @@ const userSchema = new Schema(
       lowercase: true,
       index: true,
     },
+    fullname: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
     email: {
       type: String,
       required: true,
@@ -19,11 +25,11 @@ const userSchema = new Schema(
       trim: true,
       lowercase: true,
     },
-    fullName: {
+    password: {
       type: String,
-      required: true,
-      trim: true,
-      index: true,
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters"],
+      maxlength: [30, "Password must be at most 30 characters"],
     },
     avatar: {
       type: String,
@@ -39,12 +45,7 @@ const userSchema = new Schema(
         ref: "Video",
       },
     ],
-    password: {
-      type: String,
-      required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters"],
-      maxlength: [30, "Password must be at most 30 characters"],
-    },
+
     refreshToken: {
       type: String,
     },
@@ -107,4 +108,5 @@ userSchema.methods.generateRefreshToken = function () {
     }
   );
 };
+
 export const User = model("User", userSchema);
