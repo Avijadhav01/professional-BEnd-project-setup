@@ -33,11 +33,10 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
-      default: "https://example.com/default-avatar.png",
+      required: true,
     },
     coverImage: {
       type: String,
-      default: "https://example.com/default-cover.png",
     },
     watchHistory: [
       {
@@ -45,7 +44,6 @@ const userSchema = new Schema(
         ref: "Video",
       },
     ],
-
     refreshToken: {
       type: String,
     },
@@ -53,18 +51,6 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-/*
-  🔒 Pre-save hook:
-  - "pre" means this function will run BEFORE a document is saved in the DB.
-  - We listen to the "save" event → so it runs every time a user is created or updated.
-  - Why? To automatically hash the password before storing it.
-  - We use async/await here because bcrypt.hash() and bcrypt.genSalt() return Promises.
-  - ⚡ Important: we use a NORMAL function (not arrow function) because:
-      → In Mongoose middleware, "this" refers to the current document being saved.
-      → Arrow functions do NOT have their own "this" binding, 
-         so "this" would be undefined or point to the outer scope.
-      → Using a normal function ensures "this" = current user document.
-*/
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 

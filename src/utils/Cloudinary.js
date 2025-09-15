@@ -27,8 +27,6 @@ const uploadOnCloudinary = async (localFilePath) => {
       resource_type: "auto", // auto-detect (image, video, pdf, etc.)
     });
 
-    // ✅ If upload is successful, log and return details
-    if (result) console.log("File Uploaded on cloudinary: ", result.url);
     fs.unlinkSync(localFilePath); // delete temp file
     return result;
   } catch (error) {
