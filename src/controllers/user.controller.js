@@ -1,9 +1,10 @@
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { isValidEmail } from "../validators/emailValidator.js"; // import email validator
+import { isValidEmailAndPassword } from "../validators/emailValidator.js"; // import email validator
 import { User } from "../model/User.model.js";
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken";
 
 const registerUser = AsyncHandler(async (req, res) => {
   // steps To register user:
@@ -29,8 +30,17 @@ const registerUser = AsyncHandler(async (req, res) => {
     throw new ApiError("All fields are required", 400);
   }
 
-  if (!isValidEmail(email)) {
+  const { isEmailValid, isUsernameValid } = isValidEmailAndPassword(
+    email,
+    username
+  );
+
+  if (!isEmailValid) {
     throw new ApiError("Email is not valid", 400);
+  }
+
+  if (!isUsernameValid) {
+    throw new ApiError("Username Must be lowercase letters only", 400);
   }
 
   // 3. Check if user already exists : username, email
@@ -118,21 +128,22 @@ const loginUser = AsyncHandler(async (req, res) => {
 
   // 1. Get user details from req.body
   // - you can login with email or username, so we will accept either one
-  const { username, email, password } = req.body; // client sends { identifier: 'avi' or 'a@b.com', password }
+  const { identifier, password } = req.body;
+  // client sends { identifier: 'avi' or 'a@b.com', password }
 
-  if (!email && !username) {
-    throw new ApiError("Email or Username is required", 400);
+  if (!identifier) {
+    throw new ApiError("Identifier Is Required To Login", 400);
   }
 
   if (!password) {
-    throw new ApiError("Password is required", 400);
+    throw new ApiError("Password Is Required To Login", 400);
   }
 
   // 3. Check if user exists : username/email
   const user = await User.findOne({
     $or: [
-      { email: email?.toLowerCase() },
-      { username: username?.toLowerCase() },
+      { email: identifier.toLowerCase() },
+      { username: identifier.toLowerCase() },
     ],
     // $or operator is used to check either condition for email or username
   });
@@ -210,4 +221,59 @@ const logOutUser = AsyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "user logged out successfully"));
 });
 
-export { registerUser, loginUser, logOutUser };
+// ----------------- REFRESH TOKEN -----------------
+const refreshAccessToken = AsyncHandler(async (req, res) => {
+  //
+
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken; // This is the JWT string you got from the client.
+
+  if (!incomingRefreshToken) {
+    throw new ApiError("Unauthorized request", 401);
+  }
+
+  try {
+    const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET; // This is what the server uses to recreate the signature.
+
+    const decodedToken = jwt.verify(incomingRefreshToken, refreshTokenSecret); //Token + Secret together → allows the server to check the signature and decode the payload.
+
+    if (!decodedToken || !decodedToken._id) {
+      throw new ApiError("Invalid Refresh Token", 401);
+    }
+
+    const user = await User.findById(decodedToken._id);
+
+    if (!user) {
+      throw new ApiError("User not found", 404);
+    }
+
+    if (user?.refreshToken !== incomingRefreshToken) {
+      throw new ApiError("Token mismatched or expired", 401);
+    }
+
+    const { accessToken, refreshToken } =
+      await generateAccessTokenAndRefreshToken(user._id);
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          { accessToken, refreshToken },
+          "Access token refreshed successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error refreshing access token:", error);
+    throw new ApiError("Could not refresh access token", 500);
+  }
+});
+
+export { registerUser, loginUser, logOutUser, refreshAccessToken };
