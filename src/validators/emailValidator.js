@@ -1,20 +1,17 @@
-/**
- * Validate email format (only letters/numbers + gmail.com)
- * @param {string} email
- * @returns {boolean} true if valid, false if invalid
- */
 export const isValidEmailAndUsername = (email, username) => {
   if (!email && !username) return false;
 
-  // Regex for format: letters/numbers only + @gmail.com
-  const emailRegex = /^[a-zA-Z0-9]+@gmail\.com$/;
-  const isEmailValid = emailRegex.test(email.trim());
+  // force lowercase before validation (to avoid case-sensitivity issues)
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedUsername = username.trim().toLowerCase();
 
-  const usernameRegex = /^[a-z]+$/;
+  // Regex for format: only lowercase letters/numbers + @gmail.com
+  const emailRegex = /^[a-z0-9]+@gmail\.com$/;
+  const isEmailValid = emailRegex.test(normalizedEmail);
 
-  const isUsernameValid = usernameRegex.test(username.trim());
+  // Username: allow lowercase letters + numbers only
+  const usernameRegex = /^[a-z0-9]+$/;
+  const isUsernameValid = usernameRegex.test(normalizedUsername);
 
   return { isEmailValid, isUsernameValid };
 };
-
-//    "email": "avijadhav431@gmail.com",

@@ -76,7 +76,7 @@ const registerUser = AsyncHandler(async (req, res) => {
   // 6. create user object - create entry in db
   const newUser = await User.create({
     fullname,
-    email,
+    email: email.toLowerCase(),
     username: username.toLowerCase(),
     password,
     avatar: avatarResponse.secure_url,
@@ -115,16 +115,7 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
 };
 
 const loginUser = AsyncHandler(async (req, res) => {
-  // steps To user login:
-  // 1. get user details from frontend >>
-  // 2. validate - not empty >>
-  // 3. check if user exists : username/email >>
-  // 4. check for password match >>
-  // 5. generate an access and refresh tokens
-  // 6. send cookie in response
-  // 7. return res
-
-  console.log("Request body: ", req.body);
+  // console.log("Request body: ", req.body);
 
   // 1. Get user details from req.body
   // - you can login with email or username, so we will accept either one
@@ -135,17 +126,19 @@ const loginUser = AsyncHandler(async (req, res) => {
     throw new ApiError("Identifier Is Required To Login", 400);
   }
 
+  const { isValid, type } = isValidIdentifier(identifier);
+
+  if (!isValid) {
+    throw new ApiError("Identifier is not valid", 401);
+  }
+
   if (!password) {
     throw new ApiError("Password Is Required To Login", 400);
   }
 
   // 3. Check if user exists : username/email
   const user = await User.findOne({
-    $or: [
-      { email: identifier.toLowerCase() },
-      { username: identifier.toLowerCase() },
-    ],
-    // $or operator is used to check either condition for email or username
+    [type]: identifier.toLowerCase(), //dynamically picks "email" or "username"
   });
 
   if (!user) {
