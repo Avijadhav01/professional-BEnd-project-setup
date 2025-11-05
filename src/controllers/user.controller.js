@@ -162,7 +162,7 @@ const loginUser = AsyncHandler(async (req, res) => {
     secure: true,
   };
 
-  console.log("\nUser Login successfully");
+  console.log("\nUser logged in successfully");
 
   // 6. send cookie in response
   // 7. return res
@@ -185,6 +185,10 @@ const loginUser = AsyncHandler(async (req, res) => {
 });
 
 const logOutUser = AsyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new ApiError("Unauthorized: Please log in to continue", 401);
+  }
+
   await User.findByIdAndUpdate(
     req.user._id,
     {
@@ -235,7 +239,7 @@ const refreshAccessToken = AsyncHandler(async (req, res) => {
       throw new ApiError("User not found", 404);
     }
 
-    if (user?.refreshToken !== incomingRefreshToken) {
+    if (user.refreshToken !== incomingRefreshToken) {
       throw new ApiError("Token mismatched or expired", 401);
     }
 
@@ -259,7 +263,7 @@ const refreshAccessToken = AsyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    console.error("Error refreshing access token:", error);
+    console.error("Error: ", error);
     throw new ApiError("Could not refresh access token", 500);
   }
 });
