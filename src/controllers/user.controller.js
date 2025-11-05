@@ -118,7 +118,7 @@ const loginUser = AsyncHandler(async (req, res) => {
   // client sends { identifier: 'avi' or 'a@b.com', password }
 
   if (!identifier) {
-    throw new ApiError("Identifier Is Required To Login", 400);
+    throw new ApiError("Identifier is required to login", 400);
   }
 
   const { isValid, type } = isValidIdentifier(identifier);
