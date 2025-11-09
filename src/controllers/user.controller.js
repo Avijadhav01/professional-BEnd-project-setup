@@ -1,7 +1,12 @@
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
+
+// validators
 import { isValidEmailAndUsername } from "../validators/emailValidator.js"; // import email validator
 import { passwordValidate } from "../validators/passwordValidator.js";
+import { isValidIdentifier } from "../validators/identifierValidator.js";
+
+// =======
 import { User } from "../model/User.model.js";
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -110,18 +115,17 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
 };
 
 const loginUser = AsyncHandler(async (req, res) => {
-  // console.log("Request body: ", req.body);
+  console.log("Request body: ", req.body);
 
-  // 1. Get user details from req.body
-  // - you can login with email or username, so we will accept either one
   const { identifier, password } = req.body;
-  // client sends { identifier: 'avi' or 'a@b.com', password }
 
   if (!identifier) {
     throw new ApiError("Identifier is required to login", 400);
   }
 
-  const { isValid, type } = isValidIdentifier(identifier);
+  const { isValid } = isValidIdentifier(identifier);
+
+  const type = identifier.includes("@") ? "email" : "username";
 
   if (!isValid) {
     throw new ApiError("Identifier is not valid", 401);
@@ -131,13 +135,15 @@ const loginUser = AsyncHandler(async (req, res) => {
     throw new ApiError("Password Is Required To Login", 400);
   }
 
+  console.log(type);
+
   // 3. Check if user exists : username/email
   const user = await User.findOne({
-    [type]: identifier.toLowerCase(), //dynamically picks "email" or "username"
+    [type]: identifier.trim().toLowerCase(),
   });
 
   if (!user) {
-    throw new ApiError("User not found", 404);
+    throw new ApiError(`${user} not found`, 404);
   }
 
   // 4. check for password match >>
@@ -217,8 +223,9 @@ const logOutUser = AsyncHandler(async (req, res) => {
 const refreshAccessToken = AsyncHandler(async (req, res) => {
   //
 
+  // Get the JWT string you got from the client.
   const incomingRefreshToken =
-    req.cookies.refreshToken || req.body.refreshToken; // This is the JWT string you got from the client.
+    req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
     throw new ApiError("Unauthorized request", 401);
@@ -385,6 +392,71 @@ const updateUserCoverImage = AsyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "CoverImage updated successsfully"));
 });
 
+const getUserChannelProfile = AsyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError("username is missing", 400);
+  }
+
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        totalSubscribers: {
+          $size: "$subscribers",
+        },
+        totalSubscribedTo: {
+          $size: "$subscribedTo",
+        },
+        isSubscribed: { $in: [req.user?._id, "$subscribers.subscriber"] },
+      },
+    },
+    {
+      $project: {
+        fullname: 1,
+        username: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+        totalSubscribers: 1,
+        totalSubscribedTo: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
+
+  if (!channel?.length) {
+    throw new ApiError("Channel does not exists", 404);
+  }
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(200, channel[0], "User channel fetched successfully")
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -395,4 +467,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
 };

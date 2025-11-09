@@ -1,5 +1,5 @@
-export const isValidIdentifier = (identifier) => {
-  if (!identifier) return { isValid: false, type: null };
+const isValidIdentifier = (identifier) => {
+  if (!identifier) return { isValid: false };
 
   // Normalize (trim + lowercase)
   const normalized = identifier.trim().toLowerCase();
@@ -11,12 +11,14 @@ export const isValidIdentifier = (identifier) => {
   const usernameRegex = /^[a-z0-9]+$/;
 
   if (emailRegex.test(normalized)) {
-    return { isValid: true, type: "email" };
+    return { isValid: true };
   }
 
   if (usernameRegex.test(normalized)) {
-    return { isValid: true, type: "username" };
+    return { isValid: true };
   }
 
-  return { isValid: false, type: null };
+  return { isValid: false };
 };
+
+export { isValidIdentifier };
