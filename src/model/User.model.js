@@ -33,11 +33,24 @@ const userSchema = new Schema(
       maxlength: [30, "Password must be at most 30 characters"],
     },
     avatar: {
-      type: String,
-      required: true,
+      url: {
+        type: String,
+        required: true,
+      },
+      public_id: {
+        type: String,
+        required: true,
+      },
     },
     coverImage: {
-      type: String,
+      url: {
+        type: String,
+        required: true,
+      },
+      public_id: {
+        type: String,
+        required: true,
+      },
     },
     watchHistory: [
       {

@@ -8,7 +8,7 @@ import { isValidIdentifier } from "../validators/identifierValidator.js";
 
 // =======
 import { User } from "../model/User.model.js";
-import { uploadOnCloudinary } from "../utils/Cloudinary.js";
+import { uploadToCloudinary, cloudinarySDK } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -33,7 +33,7 @@ const registerUser = AsyncHandler(async (req, res) => {
   const isPasswordValid = passwordValidate(password);
 
   if (!isPasswordValid) {
-    throw ApiError("Password is not valid", 400);
+    throw new ApiError("Password is not valid", 400);
   }
 
   if (!isEmailValid) {
@@ -63,11 +63,11 @@ const registerUser = AsyncHandler(async (req, res) => {
 
   // 5. Upload images to Cloudinary and check avatar response
 
-  const avatarResponse = await uploadOnCloudinary(avatarLocalPath);
+  const avatarResponse = await uploadToCloudinary(avatarLocalPath);
 
   let coverImageResponse = null;
   if (coverImageLocalPath) {
-    coverImageResponse = await uploadOnCloudinary(coverImageLocalPath);
+    coverImageResponse = await uploadToCloudinary(coverImageLocalPath);
   }
 
   if (!avatarResponse) {
@@ -80,8 +80,14 @@ const registerUser = AsyncHandler(async (req, res) => {
     email: email.toLowerCase(),
     username: username.toLowerCase(),
     password,
-    avatar: avatarResponse.secure_url,
-    coverImage: coverImageResponse?.secure_url || "",
+    avatar: {
+      url: avatarResponse.secure_url,
+      public_id: avatarResponse.public_id,
+    },
+    coverImage: {
+      url: coverImageResponse?.secure_url || "",
+      public_id: coverImageResponse.public_id || "",
+    },
   });
 
   const createdUser = await User.findById(newUser._id).select(
@@ -356,57 +362,94 @@ const updateUserAvatar = AsyncHandler(async (req, res) => {
     throw new ApiError("Avatar file is missing", 400);
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const avatarUrl = avatar.secure_url || avatar.url;
-
-  console.log(avatarUrl);
-
-  if (!avatarUrl) {
-    throw new ApiError("Error While uploading avatar", 500);
+  if (!req.user) {
+    throw new ApiError("Not authorized", 401);
   }
 
+  // ✅ Delete old avatar from Cloudinary (if exists)
+  const oldAvatarPublicId = req.user.avatar?.public_id;
+
+  if (oldAvatarPublicId) {
+    try {
+      await cloudinarySDK.uploader.destroy(oldAvatarPublicId);
+    } catch (error) {
+      console.error("Error deleting old avatar:", error);
+    }
+  }
+
+  // ✅ Upload new avatar
+  const avatarResponse = await uploadToCloudinary(avatarLocalPath);
+
+  if (!avatarResponse || !avatarResponse.public_id) {
+    throw new ApiError("Error while uploading new avatar", 500);
+  }
+
+  // ✅ Update user record in DB
   const user = await User.findByIdAndUpdate(
-    req.user?._id,
+    req.user._id,
     {
       $set: {
-        avatar: avatarUrl,
+        avatar: {
+          url: avatarResponse.secure_url,
+          public_id: avatarResponse.public_id,
+        },
       },
     },
-    { new: true } // Return the updated document
+    { new: true }
   ).select("-password -refreshToken");
+
+  console.log("Avatar updated successfully");
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Avatar updated successsfully"));
+    .json(new ApiResponse(200, user, "Avatar updated successfully"));
 });
 
 const updateUserCoverImage = AsyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
 
   if (!coverImageLocalPath) {
-    throw new ApiError("CoverImage file is missing", 400);
+    throw new ApiError("Cover image file is missing", 400);
   }
 
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-  const coverImageUrl = coverImage.secure_url || coverImage.url;
-
-  if (!coverImageUrl) {
-    throw new ApiError("Error While uploading coverImage", 500);
+  if (!req.user) {
+    throw new ApiError("Not authorized", 401);
   }
 
+  // Delete old cover image from Cloudinary if it exists
+  const oldCoverImagePublicId = req.user.coverImage?.public_id;
+  if (oldCoverImagePublicId) {
+    try {
+      await cloudinarySDK.uploader.destroy(oldCoverImagePublicId);
+    } catch (error) {
+      console.error("Error deleting old cover image:", error);
+    }
+  }
+
+  // Upload new cover image
+  const coverImageResponse = await uploadToCloudinary(coverImageLocalPath);
+
+  if (!coverImageResponse || !coverImageResponse.public_id) {
+    throw new ApiError("Error while uploading new cover image", 500);
+  }
+
+  // Update user in DB
   const user = await User.findByIdAndUpdate(
-    req.user?._id,
+    req.user._id,
     {
       $set: {
-        coverImage: coverImageUrl,
+        coverImage: {
+          url: coverImageResponse.secure_url,
+          public_id: coverImageResponse.public_id,
+        },
       },
     },
-    { new: true } // Return the updated document
+    { new: true }
   ).select("-password -refreshToken");
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "CoverImage updated successsfully"));
+    .json(new ApiResponse(200, user, "Cover image updated successfully"));
 });
 
 const getUserChannelProfile = AsyncHandler(async (req, res) => {

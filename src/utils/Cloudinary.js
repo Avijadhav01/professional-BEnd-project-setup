@@ -1,6 +1,7 @@
-import { v2 as cloudinary } from "cloudinary";
-import fs from "fs"; // File system module (to delete local temp files)
+import { v2 as cloudinarySDK } from "cloudinary";
+import fs from "fs";
 
+// Check credentials
 if (
   !process.env.CLOUDINARY_CLOUD_NAME ||
   !process.env.CLOUDINARY_API_KEY ||
@@ -12,29 +13,31 @@ if (
   console.log("✅ Cloudinary credentials found.");
 }
 
-cloudinary.config({
+// Configure Cloudinary
+cloudinarySDK.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (localFilePath) => {
+// Helper function to upload a local file
+const uploadToCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
 
-    // 🔽 Uploading file to Cloudinary
-    const result = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto", // auto-detect (image, video, pdf, etc.)
+    const result = await cloudinarySDK.uploader.upload(localFilePath, {
+      folder: "chai_and_code", // avoid spaces in folder names
+      resource_type: "auto", // auto-detect type
     });
 
-    fs.unlinkSync(localFilePath); // delete temp file
+    fs.unlinkSync(localFilePath); // delete local temp file
     return result;
   } catch (error) {
-    // ❌ If upload fails, delete local file (cleanup)
-    fs.unlinkSync(localFilePath);
+    // Clean up local file if upload fails
+    if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
     console.error("Error uploading file:", error);
     return null;
   }
 };
 
-export { uploadOnCloudinary };
+export { uploadToCloudinary, cloudinarySDK };
