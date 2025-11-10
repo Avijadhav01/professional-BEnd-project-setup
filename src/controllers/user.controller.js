@@ -144,7 +144,7 @@ const loginUser = AsyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw new ApiError(`${user} not found`, 404);
+    throw new ApiError(`user not found`, 404);
   }
 
   // 4. check for password match >>
@@ -279,24 +279,38 @@ const refreshAccessToken = AsyncHandler(async (req, res) => {
 const changeCurrentPassword = AsyncHandler(async (req, res) => {
   const { oldPassword, newPassword, confirmPassword } = req.body;
 
+  // 1️⃣ Check all fields provided
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    throw new ApiError("All fields (old, new, confirm) are required", 400);
+  }
+
+  // 2️⃣ Check new password and confirm password match
   if (newPassword !== confirmPassword) {
     throw new ApiError("New password and confirm password do not match", 400);
   }
 
+  // 3️⃣ Validate password strength
   if (!passwordValidate(newPassword)) {
-    throw new ApiError("New password is not valid", 400);
+    throw new ApiError("New password does not meet security requirements", 400);
   }
 
+  // 4️⃣ Find the current logged-in user
   const user = await User.findById(req.user?._id);
-  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+  if (!user) {
+    throw new ApiError("User not found or unauthorized", 401);
+  }
 
+  // 5️⃣ Check old password is correct
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
   if (!isPasswordCorrect) {
     throw new ApiError("Invalid old password", 400);
   }
 
+  // 6️⃣ Update password
   user.password = newPassword;
-  await user.save({ validateBeforeSave: false });
+  await user.save({ validateBeforeSave: false }); // pre-save hook hashes it
 
+  // 7️⃣ Send response
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Password changed successfully"));
@@ -344,6 +358,8 @@ const updateUserAvatar = AsyncHandler(async (req, res) => {
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const avatarUrl = avatar.secure_url || avatar.url;
+
+  console.log(avatarUrl);
 
   if (!avatarUrl) {
     throw new ApiError("Error While uploading avatar", 500);
