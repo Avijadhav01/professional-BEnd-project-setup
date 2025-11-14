@@ -122,8 +122,6 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
 };
 
 const loginUser = AsyncHandler(async (req, res) => {
-  console.log("Request body: ", req.body);
-
   const { identifier, password } = req.body;
 
   if (!identifier) {
@@ -205,8 +203,8 @@ const logOutUser = AsyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,
       },
     },
     {
