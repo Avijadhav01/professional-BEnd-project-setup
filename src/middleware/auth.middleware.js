@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import jwt from "jsonwebtoken";
 
-export const isLoggedIn = AsyncHandler(async (req, res, next) => {
+const isLoggedIn = AsyncHandler(async (req, res, next) => {
   const token =
     req.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
@@ -28,3 +28,5 @@ export const isLoggedIn = AsyncHandler(async (req, res, next) => {
 
   next();
 });
+
+export { isLoggedIn };

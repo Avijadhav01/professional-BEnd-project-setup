@@ -7,7 +7,7 @@ import { passwordValidate } from "../validators/passwordValidator.js";
 import { isValidIdentifier } from "../validators/identifierValidator.js";
 
 // =======
-import { User } from "../model/User.model.js";
+import { User } from "../model/user.model.js";
 import { uploadToCloudinary, cloudinarySDK } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";

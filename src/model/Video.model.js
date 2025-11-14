@@ -1,4 +1,4 @@
-import mongoose, { Mongoose, Schema, model, version } from "mongoose";
+import mongoose, { Schema, model, version } from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const videoSchema = new Schema(
@@ -32,7 +32,7 @@ const videoSchema = new Schema(
       required: true,
     },
     owner: {
-      type: Mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
   },
