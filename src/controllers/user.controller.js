@@ -140,8 +140,6 @@ const loginUser = AsyncHandler(async (req, res) => {
     throw new ApiError("Password Is Required To Login", 400);
   }
 
-  console.log(type);
-
   // 3. Check if user exists : username/email
   const user = await User.findOne({
     [type]: identifier.trim().toLowerCase(),
@@ -173,7 +171,7 @@ const loginUser = AsyncHandler(async (req, res) => {
     secure: true,
   };
 
-  console.log("\nUser logged in successfully");
+  console.log(`\n${identifier} logged in successfully`);
 
   // 6. send cookie in response
   // 7. return res

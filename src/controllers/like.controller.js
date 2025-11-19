@@ -1,7 +1,7 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Like } from "../model/like.model.js";
 import { Video } from "../model/Video.model.js";
-import { Comment } from "../models/comment.model.js";
+import { Comment } from "../model/comment.model.js";
 import { Tweet } from "../model/tweet.model.js";
 
 import { ApiError } from "../utils/ApiError.js";
@@ -14,13 +14,13 @@ const toggleVideoLike = AsyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const userId = req.user?._id;
 
-  if (!isValidObjectId(videoId)) {
-    throw new ApiError(400, "Invalid video ID format");
+  if (!isValidObjectId(videoId) || !isValidObjectId(userId)) {
+    throw new ApiError("Invalid video or user ID format", 400);
   }
 
   const video = await Video.findById(videoId);
   if (!video) {
-    throw new ApiError(404, "Video not found");
+    throw new ApiError("Video not found", 404);
   }
 
   const existingLike = await Like.findOne({
@@ -51,13 +51,13 @@ const toggleCommentLike = AsyncHandler(async (req, res) => {
   const { commentId } = req.params;
   const userId = req.user?._id;
 
-  if (!isValidObjectId(commentId)) {
-    throw new ApiError(400, "Invalid video ID format");
+  if (!isValidObjectId(commentId) || !isValidObjectId(userId)) {
+    throw new ApiError("Invalid video or user ID format", 400);
   }
 
   const comment = await Comment.findById(commentId);
   if (!comment) {
-    throw new ApiError(404, "Comment not found");
+    throw new ApiError("Comment not found", 404);
   }
 
   const existingLike = await Like.findOne({
@@ -89,13 +89,13 @@ const toggleTweetLike = AsyncHandler(async (req, res) => {
   const { tweetId } = req.params;
   const userId = req.user?._id;
 
-  if (!isValidObjectId(tweetId)) {
-    throw new ApiError(400, "Invalid tweet ID format");
+  if (!isValidObjectId(tweetId) || !isValidObjectId(userId)) {
+    throw new ApiError("Invalid tweet ID format", 400);
   }
 
   const tweet = await Tweet.findById(tweetId);
   if (!tweet) {
-    throw new ApiError(404, "Tweet not found");
+    throw new ApiError("Tweet not found", 404);
   }
 
   const existingLike = await Like.findOne({
@@ -122,7 +122,7 @@ const toggleTweetLike = AsyncHandler(async (req, res) => {
 
 const getLikedVideos = AsyncHandler(async (req, res) => {
   //TODO: get all liked videos
-  const userId = req.user._id;
+  const userId = req.user?._id;
   if (!isValidObjectId(userId)) {
     throw new ApiError("Invalid user ID", 400);
   }
@@ -139,11 +139,16 @@ const getLikedVideos = AsyncHandler(async (req, res) => {
     .map((like) => like.video)
     .filter((video) => video != null);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, likedVideos, "Liked videos fetched successfully")
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalVideos: likedVideos.length,
+        likedVideos,
+      },
+      "Liked videos fetched successfully"
+    )
+  );
 });
 
 export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };

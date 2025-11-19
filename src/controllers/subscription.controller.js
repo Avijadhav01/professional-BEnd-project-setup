@@ -12,7 +12,7 @@ const toggleSubscription = AsyncHandler(async (req, res) => {
   const userId = req.user?._id;
 
   if (!isValidObjectId(channelId) || !isValidObjectId(userId)) {
-    throw new ApiError("Invalid channel or userId", 400);
+    throw new ApiError("Invalid channel or user ID", 400);
   }
 
   const subscription = await Subscription.findOne({
@@ -21,17 +21,23 @@ const toggleSubscription = AsyncHandler(async (req, res) => {
   });
 
   if (subscription) {
-    await Subscription.deleteOne({
-      subscriber: userId,
-      channel: channelId,
-    });
+    try {
+      await Subscription.deleteOne({
+        subscriber: userId,
+        channel: channelId,
+      });
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, null, "Unsubscribed successfully"));
+      return res
+        .status(200)
+        .json(new ApiResponse(200, null, "Unsubscribed successfully"));
+    } catch (error) {
+      console.log("Error : ", error);
+      throw new ApiError("Error while deleting subcription");
+    }
   } else {
     const subscribed = Subscription.create({
       subscriber: userId,
+      channel: channelId,
     });
 
     return res
@@ -44,6 +50,7 @@ const toggleSubscription = AsyncHandler(async (req, res) => {
 const getUserChannelSubscribers = AsyncHandler(async (req, res) => {
   const { channelId } = req.params;
   const loggedInUserId = req.user?._id;
+
   if (!isValidObjectId(channelId)) {
     throw new ApiError("Invalid channel ID", 400);
   }
@@ -67,7 +74,7 @@ const getUserChannelSubscribers = AsyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        isSubscribed: {
+        isLoggedInUserSubscribed: {
           $eq: ["$subscriber", new mongoose.Types.ObjectId(loggedInUserId)],
         },
       },
@@ -78,7 +85,7 @@ const getUserChannelSubscribers = AsyncHandler(async (req, res) => {
         username: "$subscriberInfo.username",
         fullname: "$subscriberInfo.fullname",
         avatar: "$subscriberInfo.avatar",
-        isSubscribed: 1,
+        isLoggedInUserSubscribed: 1,
       },
     },
     {
@@ -99,16 +106,15 @@ const getUserChannelSubscribers = AsyncHandler(async (req, res) => {
 });
 
 // controller to return channel list to which user has subscribed
-const getSubscribedChannels = AsyncHandler(async (req, res) => {
-  const { subscriberId } = req.params;
-
-  if (!isValidObjectId(subscriberId)) {
+const getLoggedInUsersSubscribedChannels = AsyncHandler(async (req, res) => {
+  const channelId = req.user?._id;
+  if (!isValidObjectId(channelId)) {
     throw new ApiError("Invalid subscriber ID", 400);
   }
 
   const channels = await Subscription.aggregate([
     // 1️⃣ Only subscriptions of this user
-    { $match: { subscriber: new mongoose.Types.ObjectId(subscriberId) } },
+    { $match: { subscriber: new mongoose.Types.ObjectId(channelId) } },
 
     // 2️⃣ Sort by latest subscription
     { $sort: { createdAt: -1 } },
@@ -163,4 +169,8 @@ const getSubscribedChannels = AsyncHandler(async (req, res) => {
   );
 });
 
-export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
+export {
+  toggleSubscription,
+  getUserChannelSubscribers,
+  getLoggedInUsersSubscribedChannels,
+};

@@ -9,13 +9,14 @@ import { AsyncHandler } from "../utils/AsyncHandler.js";
 
 // logged in user's dashbord it is private
 const getChannelStats = AsyncHandler(async (req, res) => {
-  // Logged-in user's channel ID
-  const channelObjectId = req.user._id;
+  const channelObjectId = req.user?._id;
 
   // Count subscribers for logged-in user's channel
-  const totalSubscribers = await Subscription.countDocuments({
+  const subscribers = await Subscription.find({
     channel: channelObjectId,
   });
+
+  const totalSubscribers = subscribers.length;
 
   // Get user's videos
   const videos = await Video.find({ owner: channelObjectId }).select(
@@ -69,6 +70,7 @@ const getChannelVideos = AsyncHandler(async (req, res) => {
     new ApiResponse(
       200,
       {
+        totalVideos: videos.length,
         videoInfo: {
           channelName: channel.username,
           avatar: channel.avatar,
